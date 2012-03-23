@@ -1,0 +1,21 @@
+#Copyright 2012 Logan Ding <logan.ding@gmail.com>. All Rights Reserved.
+
+Help you to download lecutres (videos and slides) from Coursera.org
+You can choose any to download.
+
+Current supported courses:
+1, Model Thinking
+2, Game Theory
+3, Cryptography
+4, Software as a Service
+5, Probabilistic Graphical Models
+6, Design and Analysis of Alogrithms I
+You can just add courses by yourslef in main() if you registered them on time before. 
+
+Developed with pyton 2.7.
+Dependent on 'mechanize'. Use 'easy_install mechanize' first if 'mechanize' not installed.
+Be sure to change the email and the password in main() to yours first before running.
+Only support single thread to download right now.
+
+Run as: 'python coursera_downloader.py' will download to CWD.
+Run as: 'python coursera_downloader.py <dir>' will download to path <dir>.
