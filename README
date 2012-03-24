@@ -19,3 +19,14 @@ Only support single thread to download right now.
 
 Run as: 'python coursera_downloader.py' will download to CWD.
 Run as: 'python coursera_downloader.py <dir>' will download to path <dir>.
+
+For download contents selection input, already handled common intuition from the beginning. 
+Valid input: 3, 5, 7-18 or 3,5,7-18 or 3 5 7-18 or multiple space or comma seperated. 
+Range input supports 7-18 or 7:18.
+
+Version 1.1 Update:
+
+Can download subtitles (srt or txt) now, except 'modelthinking' course.
+Current links resolve and match method is not elegant. 
+To solve all video and subtitle matching problem, need time to change the current link and name extracting method.
+If have time, will solve this.

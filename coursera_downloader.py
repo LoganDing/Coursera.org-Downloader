@@ -3,7 +3,7 @@
 # Copyright 2012 Logan Ding <logan.ding@gmail.com>. All Rights Reserved.
 #
 #---------------------------------------------                             
-#    Coursera.org Downloader <Version 1.0>   
+#    Coursera.org Downloader <Version 1.1>   
 #          by Logan Ding                                      
 #---------------------------------------------
 #
@@ -15,6 +15,8 @@
 #
 # Only support single thread to download right now.
 # Add courses by yourself. Not all tested. You can feed back.
+# Download videos, subtitles, PDF and PPT(X) slides.
+# Has problem to resolve subtitles for 'modelthinking'. Ignored...now.
 
 import cookielib, re, sys, os
 try:
@@ -48,6 +50,9 @@ def resolve_name_with_hex(name):
         name = re.sub(m.group(), c, name)
     return name
 
+def resolve_name_with_illegal_char(name):
+    return re.sub(r'[\\/:*?"<>|]', ' -', name)
+
 def initialize_browser(course, email, password):
     #Use mechanize to handle cookie
     print
@@ -79,52 +84,76 @@ def initialize_browser(course, email, password):
     br.open(video_lectures)
     return br
 
-def resolve_resources(br, path):
-    lecture = []
-    b_video = []
-    video   = []
-    pdf     = []
-    pptx    = []
+def resolve_resources(br, path, course):
+    title       = []
+    pdf         = []
+    pptx        = []
+    link_txt    = []
+    link_srt    = []
+    link_video  = []
 
     for l in br.links():
-        m_video = re.search(r'https:[\S]+download.mp4[\S]+\'', str(l))
+        m_title = re.search(r'text=[\'\"](.+)[\'\"], tag=\'a\', .+\'class\', \'lecture-link\'', str(l))
         m_pdf = re.search(r'https*:[\S]+/([\S]+\.pdf)', str(l))
         m_pptx = re.search(r'https*:[\S]+/([\S]+\.pptx*)', str(l))
-    
-        if m_video:
-            b_video.append(m_video.group().rstrip("'"))
+        m_txt = re.search(r'url=\'(https:[\S]+subtitles\?[\S]+=txt)', str(l))
+        m_srt = re.search(r'url=\'(https:[\S]+subtitles\?[\S]+=srt)', str(l))
+        m_video = re.search(r'https:[\S]+download.mp4[\S]+\'', str(l))
+
+        if m_title:
+            title.append(resolve_name_with_illegal_char(m_title.group(1).strip()))
         if m_pdf:
             pdf.append([resolve_name_with_hex(m_pdf.group(1)), m_pdf.group()])
         if m_pptx:
             pptx.append([resolve_name_with_hex(m_pptx.group(1)), m_pptx.group()])
+        if m_txt:
+            link_txt.append(m_txt.group(1))
+        if m_srt:
+            link_srt.append(m_srt.group(1))
+        if m_video:
+            link_video.append(m_video.group().rstrip("'"))
 
-    for l in b_video:
-        br.open(l)
-        tmp_l = br.geturl()
-        index = tmp_l.find('?')
-        tmp_l = tmp_l[ : index]
-        video.append(tmp_l)
-        index = tmp_l.rfind('/')
-        lecture.append(resolve_name_with_hex(tmp_l[index+1 :]))
-
-    if len(lecture) == len(video):
-        mp4 = zip(lecture, video)
+    if len(title) == len(link_video):
+        video = zip([t+'.mp4' for t in title], link_video)
     else:
         print 'Video names resolving error. Ignore videos...'
-        mp4 = []
-    return mp4, pdf, pptx
+        video = []
+    # Here is a buggy way to handle different numbers of videos and subtitles for 'modelthinking' and 'saas'.
+    # To completely solve the problem, need to change the links resolve and match method completely.
+    # Will fix this if have time. Right now, this inelegant way can handle 'saas' only.
+    if len(title) == len(link_srt):
+        srt = zip([t+'.srt' for t in title], link_srt)
+    elif course == 'saas':
+        srt = zip([t+'.srt' for t in title[len(title)-len(link_srt) : ]], link_srt)
+    else:
+        print 'Can NOT match video names with subtitiles. Ignore...'
+        srt = []
 
-def downloader(mp4, pdf, pptx, br, path):
+    if len(title) == len(link_txt):
+        txt = zip([t+'.txt' for t in title], link_txt)
+    elif course == 'saas':
+        txt = zip([t+'.txt' for t in title[len(title)-len(link_txt) : ]], link_txt)
+    else:
+        print 'Can NOT match video names with subtitiles. Ignore...'
+        txt = []
+    return video, srt, txt, pdf, pptx
+    
+def downloader(video, srt, txt, pdf, pptx, br, path):
     # Only single download thread supported right now.
+    print
     print 'Videos can be downloaded:'
-    v = choose_download(mp4)
+    v = choose_download(video)
+    print 'srt subtitles can be downloaded:'
+    s = choose_download(srt)
+    print 'txt subtitles can be downloaded:'
+    t = choose_download(txt)
     print 'PDF slides can be downloaded:'
     f = choose_download(pdf)
     print 'PPT slides can be downloaded:'
     x = choose_download(pptx)
 
     # Combine all to be downloaded together for multiple downloading threads later
-    all = v + f + x 
+    all = v + s + t + f + x 
     for r in all:
         filename = os.path.join(path, r[0])
         print 'Downloading', r[0]
@@ -143,12 +172,13 @@ def choose_course(course):
 def parse_choice(input):
     if input == '':
         return input
-    input = split_string(input, ' ,') 
+    input = split_string(input, ' ,')
+    # This split can handle your input as: 1,3,4-5 or 1 3 4-5 or 1, 3, 4-5. Besides, range input support 4-5 or 4:5 
     choice = []
     for e in input:
         if e.isdigit():
             if e not in choice:
-                choice.append(e)
+                choice.append(int(e))
         else:
             s = split_string(e, ':-')
             if len(s) != 2 or not s[0].isdigit() or not s[1].isdigit():
@@ -157,7 +187,7 @@ def parse_choice(input):
                 for num in range(int(s[0]), int(s[1])+1):
                     if num not in choice:
                         choice.append(num)
-    return choice           
+    return sorted(choice)           
 
 def choose_download(resource):
     for i in range(len(resource)):
@@ -212,8 +242,8 @@ def main():
     print
     course = choose_course(course)
     br = initialize_browser(course, email, password)
-    mp4, pdf, pptx = resolve_resources(br, path)
-    downloader(mp4, pdf, pptx, br, path)
+    vidoe, srt, txt, pdf, pptx = resolve_resources(br, path, course)
+    downloader(vidoe, srt, txt, pdf, pptx, br, path)
 
 if __name__ == '__main__':
     main()
