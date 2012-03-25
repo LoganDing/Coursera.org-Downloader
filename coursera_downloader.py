@@ -66,7 +66,7 @@ def initialize_browser(course, email, password):
     br.set_handle_referer(True)
     br.set_handle_robots(False)
     br.set_handle_refresh(mechanize._http.HTTPRefreshProcessor(), max_time = 0)
-    auth_url = 'https://www.coursera.org/****/auth/auth_redirector?type=login&subtype=normal&email'.replace('****', course)
+    auth_url = 'https://class.coursera.org/****/auth/auth_redirector?type=login&subtype=normal&email'.replace('****', course)
     br.open(auth_url)
 
     br.select_form(nr = 0)
@@ -76,11 +76,11 @@ def initialize_browser(course, email, password):
     print 'It takes seconds to login and resolve resources to download...\n'
 
     #Check if email + password submitted correctly
-    if 'https://www.coursera.org/****/auth/login_receiver?data='.replace('****', course) not in br.geturl():
+    if 'https://class.coursera.org/****/auth/login_receiver?data='.replace('****', course) not in br.geturl():
         print 'Failed to login, exit...'
         sys.exit(1)
 
-    video_lectures = 'https://www.coursera.org/****/lecture/index'.replace('****', course)
+    video_lectures = 'https://class.coursera.org/****/lecture/index'.replace('****', course)
     br.open(video_lectures)
     return br
 
