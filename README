@@ -26,6 +26,8 @@ Range input supports 7-18 or 7:18.
 
 Version 1.1 Update:
 
+Change videos naming to what they appear on the web page. 
+Subtitles share the same name which makes them loaded automatically during watching videos.
 Can download subtitles (srt or txt) now, except 'modelthinking' course.
 Current links resolve and match method is not elegant. 
 To solve all video and subtitle matching problem, need time to change the current link and name extracting method.
